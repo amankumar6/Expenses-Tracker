@@ -22,7 +22,9 @@ initializeContainer().catch(console.error);
 
 // CORS config
 const corsOptions = {
-    origin: [process.env.FRONT_END],
+    origin: '*',
+    // origin: [process.env.FRONTEND_DEV,process.env.FRONTEND_URL],
+    credentials: true
 };
 
 // Middleware
