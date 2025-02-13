@@ -1,31 +1,36 @@
 const express = require("express");
 const isAuthenticated = require("../middlewares/isAuth");
+const { upload, handleMulterError } = require("../middlewares/uploadMiddleware");
 const transactionController = require("../controllers/transactionController");
 
 const transactionRouter = express.Router();
 
-// Creating
+// Creating Transaction (with optional receipt upload)
 transactionRouter.post(
     "/create",
     isAuthenticated,
+    upload.single('receipt'),
+    handleMulterError,
     transactionController.create
 );
 
-// Reading
+// Reading Transaction
 transactionRouter.get(
     "/lists",
     isAuthenticated,
     transactionController.getFilteredTransactions
 );
 
-// Updating
+// Updating Transaction
 transactionRouter.put(
     "/update/:id",
     isAuthenticated,
+    upload.single('receipt'),
+    handleMulterError,
     transactionController.updateTransaction
 );
 
-// Deleting
+// Deleting Transaction
 transactionRouter.delete(
     "/delete/:id",
     isAuthenticated,

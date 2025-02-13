@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import { useFormik } from "formik";
@@ -12,7 +12,8 @@ import { loginAction } from "../../redux/slice/authSlice";
 
 // Validations
 const validationSchema = Yup.object({
-    email: Yup.string().email("Invalid").required("Email is Required!"),
+    emailOrUsername: Yup.string()
+        .required("Email or Username is Required!"),
     password: Yup.string()
         .min(5, "Password must be at least 5 character ")
         .required("Password is required"),
@@ -32,27 +33,32 @@ const LoginForm = () => {
 
     const formik = useFormik({
         initialValues: {
-            email: "Kumar@gmail.com",
-            password: "12345",
+            emailOrUsername: "",
+            password: "",
         },
         // validations
         validationSchema,
-        onSubmit: (values) => {
-            mutateAsync(values)
-                .then((data) => {
-                    // dispatch action
-                    dispatch(loginAction(data));
-                    console.log(data);
-                    localStorage.setItem("userInfo", JSON.stringify(data));
-                })
-                .catch((e) => console.log(e));
+        onSubmit: async (values) => {
+            try {
+                const data = await mutateAsync(values);
+                // Store user data first
+                localStorage.setItem("userInfo", JSON.stringify(data));
+                // Then dispatch the action
+                dispatch(loginAction(data));
+                // Small delay to ensure token is stored before navigation
+                setTimeout(() => {
+                    navigate("/dashboard");
+                }, 100);
+            } catch (error) {
+                console.error(error);
+            }
         },
     });
 
     useEffect(() => {
-        setTimeout(() => {
-            if (isSuccess) navigate("/dashboard");
-        }, 500);
+        if (isSuccess) {
+            navigate("/dashboard");
+        }
     }, [isPending, isError, error, isSuccess]);
 
     return (
@@ -83,19 +89,19 @@ const LoginForm = () => {
                 Login to access your account
             </p>
 
-            {/* Input Field - Email */}
+            {/* Input Field - Email/Username */}
             <div className="relative">
                 <FaEnvelope className="absolute top-3 left-3 text-gray-400" />
                 <input
-                    id="email"
-                    type="email"
-                    {...formik.getFieldProps("email")}
-                    placeholder="Email"
+                    id="emailOrUsername"
+                    type="text"
+                    {...formik.getFieldProps("emailOrUsername")}
+                    placeholder="Email or Username"
                     className="pl-10 pr-4 py-2 w-full rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
-                {formik.touched.email && formik.errors.email && (
+                {formik.touched.emailOrUsername && formik.errors.emailOrUsername && (
                     <span className="text-xs text-red-500">
-                        {formik.errors.email}
+                        {formik.errors.emailOrUsername}
                     </span>
                 )}
             </div>
@@ -124,6 +130,21 @@ const LoginForm = () => {
             >
                 Login
             </button>
+
+            <div className="flex items-center justify-between">
+                <Link
+                    to="/register"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                >
+                    Create an account
+                </Link>
+                <Link
+                    to="/forgot-password"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                >
+                    Forgot password?
+                </Link>
+            </div>
         </form>
     );
 };

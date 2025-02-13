@@ -30,54 +30,35 @@ export const addCategoryAPI = async ({ name, type }) => {
 };
 
 // READ
+export const fetchingCategoryAPI = async (context) => {
+    try {
+        const filters = context?.queryKey?.[1] || {};
+        let url = `${BASE_URL}${READ_CATEGORY}`;
 
-// export const fetchingCategoryAPI = async (categoryId = null) => {
-//     let url = `${BASE_URL}${READ_CATEGORY}`;
-//     let respose;
-//     console.log(categoryId.queryKey[1]);
-//     if (categoryId !== null) {
-//         const categoryIdStr = String(categoryId);
-//         url += `/${categoryIdStr}`;
-//         response = await axios.get(url, {
-//             params: {
-//                 categoryId,
-//             },
-//             headers: {
-//                 Authorization: token,
-//             },
-//         });
-//     }
-//     response = await axios.get(url, {
-//         headers: {
-//             Authorization: token,
-//         },
-//     });
-//     return response.data;
-// };
+        // Add query parameters if filters exist
+        if (Object.keys(filters).length > 0) {
+            const queryParams = new URLSearchParams();
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value && value !== '') {
+                    queryParams.append(key, value);
+                }
+            });
+            if (queryParams.toString()) {
+                url += `?${queryParams.toString()}`;
+            }
+        }
 
-export const fetchingCategoryAPI = async ({ queryKey }) => {
-    const [_key, id] = queryKey;
-    let url = `${BASE_URL}${READ_CATEGORY}`;
-    if (id) {
-        url = `${url}?id=${id}`;
+        const response = await axios.get(url, {
+            headers: {
+                Authorization: token,
+            },
+        });
+
+        return response.data;
+    } catch (error) {
+        throw error;
     }
-    const response = await axios.get(url, {
-        headers: {
-            Authorization: token,
-        },
-    });
-    return response.data;
 };
-
-// export const fetchingCategoryAPI = async () => {
-//     const url = `${BASE_URL}${READ_CATEGORY}`;
-//     const response = await axios.get(url, {
-//         headers: {
-//             Authorization: token,
-//         },
-//     });
-//     return response.data;
-// };
 
 // UPDATE
 export const updateCategoryAPI = async ({ name, type, categoryId }) => {

@@ -67,14 +67,12 @@ const categoryController = {
         const normalizedName = newName.toLowerCase();
         const category = await Category.findById(categoryId);
 
-        if (!category || category.user.toString() !== req.user.toString()) {
-            if (!category && category.user.toString() !== req.user.toString())
-                throw new Error("Category not found and user not authorized");
+        if (!category) {
+            throw new Error("Category not found.");
+        }
 
-            if (!category) throw new Error("Category not found.");
-
-            if (category.user.toString() !== req.user.toString())
-                throw new Error("Uuser not authorized");
+        if (category.user.toString() !== req.user.toString()) {
+            throw new Error("User not authorized");
         }
 
         const oldName = category.name;

@@ -2,14 +2,14 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { getTransactionsAPI } from "../../services/transactionServices";
+import { fetchTransactionsAPI } from "../../services/transactionServices";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TransactionChart = ({ filters }) => {
     const { data: transactions } = useQuery({
-        queryFn: () => getTransactionsAPI(filters),
-        queryKey: ["getTransactions", filters],
+        queryFn: fetchTransactionsAPI,
+        queryKey: ["transactions", filters],
     });
 
     const totals = transactions?.reduce(

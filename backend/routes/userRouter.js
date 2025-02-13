@@ -17,7 +17,7 @@ userRouter.get("/profile", isAuthenticated, userController.profile);
 userRouter.put(
     "/changePassword",
     isAuthenticated,
-    userController.changeUserPassword
+    userController.changePassword
 );
 
 // Update Profile
@@ -26,5 +26,11 @@ userRouter.put(
     isAuthenticated,
     userController.updateUserProfile
 );
+
+// Forgot Password
+userRouter.post("/forgot-password", userController.forgotPassword);
+
+// Reset Password
+userRouter.post("/reset-password", userController.resetPassword);
 
 module.exports = userRouter;

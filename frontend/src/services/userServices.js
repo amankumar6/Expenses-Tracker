@@ -8,12 +8,10 @@ import {
 } from "../utils/url";
 import { getUserTokenFromLocalStorage } from "../utils/getUserTokenFromLocalStorage";
 
-const token = getUserTokenFromLocalStorage();
-
 // LOGIN
-export const loginAPI = async ({ email, password }) => {
+export const loginAPI = async ({ emailOrUsername, password }) => {
     const response = await axios.post(`${BASE_URL}${LOGIN_USER}`, {
-        email,
+        emailOrUsername,
         password,
     });
 
@@ -33,6 +31,7 @@ export const registerAPI = async ({ username, email, password }) => {
 
 // UPDATE
 export const updateProfileAPI = async ({ username, email }) => {
+    const token = getUserTokenFromLocalStorage(); // Get fresh token for each request
     const response = await axios.put(
         `${BASE_URL}${UPDATE_USER}`,
         {
@@ -50,7 +49,27 @@ export const updateProfileAPI = async ({ username, email }) => {
 };
 
 // CHANGE PASSWORD
+export const changePasswordAPI = async ({ password, captcha }) => {
+    const token = getUserTokenFromLocalStorage(); // Get fresh token for each request
+    const response = await axios.put(
+        `${BASE_URL}${CHANGE_USER_PASSWORD}`,
+        {
+            password,
+            captcha
+        },
+        {
+            headers: {
+                Authorization: token,
+            },
+        }
+    );
+
+    return response.data;
+};
+
+// CHANGE PASSWORD
 export const updatePasswordAPI = async (newPassword) => {
+    const token = getUserTokenFromLocalStorage(); // Get fresh token for each request
     const response = await axios.put(
         `${BASE_URL}${CHANGE_USER_PASSWORD}`,
         {
@@ -63,5 +82,23 @@ export const updatePasswordAPI = async (newPassword) => {
         }
     );
 
+    return response.data;
+};
+
+// FORGOT PASSWORD
+export const forgotPasswordAPI = async ({ email }) => {
+    const response = await axios.post(
+        `${BASE_URL}/users/forgot-password`,
+        { email }
+    );
+    return response.data;
+};
+
+// RESET PASSWORD
+export const resetPasswordAPI = async ({ token, password }) => {
+    const response = await axios.post(
+        `${BASE_URL}/users/reset-password`,
+        { token, password }
+    );
     return response.data;
 };

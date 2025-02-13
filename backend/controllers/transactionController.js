@@ -1,116 +1,203 @@
 const asyncHandler = require("express-async-handler");
-
+const { uploadReceipt, deleteReceipt } = require("../utils/azureStorage");
 const Transaction = require("../model/Transaction");
 
 const transactionController = {
     // Creating Transaction
     create: asyncHandler(async (req, res) => {
-        const {
-            type,
-            category,
-            amount,
-            date,
-            description
-        } = req.body;
+        try {
+            const {
+                type,
+                category,
+                amount,
+                date,
+                description
+            } = req.body;
 
-        if (!amount || !type || !date) {
-            throw new Error("Type, amount and date are required!!");
+            // Validate required fields
+            if (!amount || !type || !date) {
+                res.status(400);
+                throw new Error("Type, amount and date are required!");
+            }
+
+            // Validate amount is a number
+            const numericAmount = Number(amount);
+            if (isNaN(numericAmount)) {
+                res.status(400);
+                throw new Error("Amount must be a valid number");
+            }
+
+            // Handle receipt upload if present (optional)
+            let receiptUrl = null;
+            if (req.file) {
+                try {
+                    receiptUrl = await uploadReceipt(req.file);
+                } catch (error) {
+                    console.error('Error uploading receipt:', error);
+                    res.status(500);
+                    throw new Error(`Failed to upload receipt: ${error.message}`);
+                }
+            }
+
+            const transaction = await Transaction.create({
+                user: req.user,
+                type,
+                category,
+                amount: numericAmount,
+                date,
+                description,
+                receiptUrl
+            });
+
+            res.status(201).json({
+                status: "success",
+                message: "Transaction created successfully",
+                transaction,
+            });
+        } catch (error) {
+            // If there was an error and we uploaded a receipt, clean it up
+            if (error && req.file && receiptUrl) {
+                try {
+                    await deleteReceipt(receiptUrl);
+                } catch (cleanupError) {
+                    console.error('Error cleaning up receipt after failed transaction:', cleanupError);
+                }
+            }
+            throw error;
         }
-
-        const transaction = await Transaction.create({
-            user: req.user,
-            type,
-            category,
-            amount,
-            date,
-            description,
-        });
-
-        res.status(201).json(transaction);
     }),
 
     // Reading Transaction
     getFilteredTransactions: asyncHandler(async (req, res) => {
-        const {
-            startDate,
-            endDate,
-            type,
-            category,
-            id
-        } = req.query;
-    
-        if (id) {
-            const transaction = await Transaction.findById(id);
-            if (!transaction) {
-                return res.status(404).json({ message: "Transaction not found" });
+        try {
+            const { startDate, endDate, type, category, id } = req.query;
+
+            // If specific transaction ID is requested
+            if (id) {
+                const transaction = await Transaction.findById(id);
+                if (!transaction) {
+                    res.status(404);
+                    throw new Error("Transaction not found");
+                }
+                return res.json(transaction);
             }
-            return res.status(200).json(transaction);
-        }
 
-        let filters = {
-            user: req.user,
-        };
+            // Build filter object
+            const filters = { user: req.user };
 
-        if (startDate) {
-            filters.date = {
-                ...filters.date,
-                $gte: new Date(startDate),
-            };
-        }
+            if (type) {
+                filters.type = type;
+            }
 
-        if (endDate) {
-            filters.date = {
-                ...filters.date,
-                $lte: new Date(endDate),
-            };
-        }
-
-        if (type) {
-            filters.type = type;
-        }
-
-        if (category) {
-            if (category === "All") {} else if (category === "Uncategorized") {
-                filters.category = "Uncategorized";
-            } else {
+            if (category) {
                 filters.category = category;
             }
+
+            // Add date range filter if either startDate or endDate is provided
+            if (startDate || endDate) {
+                filters.date = {};
+                if (startDate) {
+                    filters.date.$gte = new Date(startDate);
+                }
+                if (endDate) {
+                    filters.date.$lte = new Date(endDate);
+                }
+            }
+
+            const transactions = await Transaction.find(filters)
+                .sort({ date: -1 }) // Sort by date descending
+                .lean(); // Convert to plain JavaScript objects
+
+            res.json(transactions);
+        } catch (error) {
+            console.error('Error in getFilteredTransactions:', error);
+            throw error;
         }
-
-        const transactions = await Transaction.find(filters).sort({
-            date: -1,
-        });
-
-        res.json(transactions);
     }),
 
     // Update Transaction
     updateTransaction: asyncHandler(async (req, res) => {
-        // Find the transaction
         const transaction = await Transaction.findById(req.params.id);
 
-        if (transaction && transaction.user.toString() == req.user.toString()) {
-            transaction.type = req.body.type || transaction.type;
-            transaction.category = req.body.category || transaction.category;
-            transaction.amount = req.body.amount || transaction.amount;
-            transaction.date = req.body.date || transaction.date;
-            transaction.description = req.body.description || transaction.description;
-
-            const updatedTransaction = await transaction.save();
-            res.json(updatedTransaction);
+        if (!transaction) {
+            res.status(404);
+            throw new Error("Transaction not found");
         }
+
+        // Verify ownership
+        if (transaction.user.toString() !== req.user.toString()) {
+            res.status(403);
+            throw new Error("Not authorized to update this transaction");
+        }
+
+        // Update fields
+        const updates = { ...req.body };
+        
+        // Convert amount to number if present
+        if (updates.amount) {
+            const numericAmount = Number(updates.amount);
+            if (isNaN(numericAmount)) {
+                res.status(400);
+                throw new Error("Amount must be a valid number");
+            }
+            updates.amount = numericAmount;
+        }
+
+        // Handle receipt upload if present
+        if (req.file) {
+            try {
+                // Delete old receipt if exists
+                if (transaction.receiptUrl) {
+                    await deleteReceipt(transaction.receiptUrl);
+                }
+                updates.receiptUrl = await uploadReceipt(req.file);
+            } catch (error) {
+                console.error('Error handling receipt:', error);
+                res.status(500);
+                throw new Error(`Failed to handle receipt: ${error.message}`);
+            }
+        }
+
+        // Update transaction
+        const updatedTransaction = await Transaction.findByIdAndUpdate(
+            req.params.id,
+            updates,
+            { new: true, runValidators: true }
+        );
+
+        res.json({
+            status: "success",
+            message: "Transaction updated successfully",
+            transaction: updatedTransaction,
+        });
     }),
 
     // Delete Transaction
     deleteTransaction: asyncHandler(async (req, res) => {
         const transaction = await Transaction.findById(req.params.id);
 
-        if (transaction && transaction.user.toString() == req.user.toString()) {
-            await Transaction.findByIdAndDelete(req.params.id);
-            res.json({
-                message: "Transaction Removed"
-            });
+        if (!transaction) {
+            res.status(404);
+            throw new Error("Transaction not found");
         }
+
+        // Verify ownership
+        if (transaction.user.toString() !== req.user.toString()) {
+            res.status(403);
+            throw new Error("Not authorized to delete this transaction");
+        }
+
+        // Delete receipt if exists
+        if (transaction.receiptUrl) {
+            try {
+                await deleteReceipt(transaction.receiptUrl);
+            } catch (error) {
+                console.error('Error deleting receipt:', error);
+            }
+        }
+
+        await transaction.deleteOne();
+        res.json({ message: "Transaction deleted successfully" });
     }),
 };
 

@@ -6,12 +6,15 @@ import PublicNavbar from "./components/Navbar/PublicNavbar";
 import HomePage from "./components/Home/HomePage";
 import LoginForm from "./components/Users/Login";
 import RegistrationForm from "./components/Users/Register";
+import ForgotPassword from "./components/Users/ForgotPassword";
+import ResetPassword from "./components/Users/ResetPassword";
 import AddCategory from "./components/Category/AddCategory";
 import CategoriesList from "./components/Category/CategoriesList";
 import UpdateCategory from "./components/Category/UpdateCategory";
 import TransactionForm from "./components/Transactions/TransactionForm";
 import Dashboard from "./components/Users/Dashboard";
 import UserProfile from "./components/Users/UserProfile";
+import ChangePassword from "./components/Users/ChangePassword";
 import AuthRoute from "./components/Auth/AuthRoute";
 import NotFound from "./components/NotFound/NotFound";
 
@@ -25,6 +28,8 @@ const App = () => {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginForm />} />
                 <Route path="/register" element={<RegistrationForm />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route
                     path="/add-category"
                     element={
@@ -78,6 +83,14 @@ const App = () => {
                     element={
                         <AuthRoute>
                             <UserProfile user={user} />
+                        </AuthRoute>
+                    }
+                />
+                <Route
+                    path="/change-password"
+                    element={
+                        <AuthRoute>
+                            <ChangePassword />
                         </AuthRoute>
                     }
                 />

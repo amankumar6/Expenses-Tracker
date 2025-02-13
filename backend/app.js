@@ -1,6 +1,7 @@
 const cors = require("cors");
 const express = require("express");
 const mongoose = require("mongoose");
+const { initializeContainer } = require("./utils/azureStorage");
 require("dotenv").config({ path: ".env" });
 
 const userRouter = require("./routes/userRouter");
@@ -15,6 +16,9 @@ mongoose
     .connect(process.env.DATABASE)
     .then(() => console.log("DB Connected"))
     .catch((e) => console.log(e));
+
+// Initialize Azure Storage container
+initializeContainer().catch(console.error);
 
 // CORS config
 const corsOptions = {

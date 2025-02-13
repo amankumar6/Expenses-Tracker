@@ -29,6 +29,10 @@ const transactionSchema = new mongoose.Schema(
         description:{
             type: String,
             required: false,
+        },
+        receiptUrl: {
+            type: String,
+            required: false,
         }
     }
 );
