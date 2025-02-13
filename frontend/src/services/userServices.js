@@ -8,14 +8,35 @@ import {
 } from "../utils/url";
 import { getUserTokenFromLocalStorage } from "../utils/getUserTokenFromLocalStorage";
 
+// Create axios instance with default config
+const api = axios.create({
+    withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+    }
+});
+
 // LOGIN
 export const loginAPI = async ({ emailOrUsername, password }) => {
-    const response = await axios.post(`${BASE_URL}${LOGIN_USER}`, {
-        emailOrUsername,
-        password,
-    });
-
-    return response.data;
+    try {
+        const response = await api.post(`${BASE_URL}${LOGIN_USER}`, {
+            emailOrUsername,
+            password,
+        });
+        return response.data;
+    } catch (error) {
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            throw new Error(error.response.data.message || 'Login failed');
+        } else if (error.request) {
+            // The request was made but no response was received
+            throw new Error('No response from server');
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            throw new Error('Error setting up request');
+        }
+    }
 };
 
 // REGISTER
