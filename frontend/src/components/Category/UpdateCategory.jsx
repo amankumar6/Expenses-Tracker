@@ -15,7 +15,8 @@ import AlertMessage from "../Alert/AlertMessage";
 const validationSchema = Yup.object({
     name: Yup.string()
         .required("Category name is required")
-        .oneOf(["income", "expense"]),
+        .min(2, "Name must be at least 2 characters")
+        .max(50, "Name must be less than 50 characters"),
     type: Yup.string()
         .required("Category type is required")
         .oneOf(["income", "expense"]),
